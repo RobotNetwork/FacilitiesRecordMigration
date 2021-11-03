@@ -1,6 +1,6 @@
 ﻿// begin query on the existing Facilities table
 var oldRecord = new GlideRecord('x_421393_facilitie_facilities_request');
-
+  
 // add a query for inactive tickets
 oldRecord.addQuery('number=FAC0002699');
 
@@ -20,6 +20,90 @@ while (oldRecord.next()) {
     } else {
         newRecord.category = categories[1];
     }
+
+    // check current state, then map to the appropriate state and substates
+    var stateValue = parseInt(oldRecord.state)
+    switch (stateValue) {
+        case 3: // "Cancel - Future Refresh Program"
+          newRecord.state = 7; // "Cancelled"
+          newRecord.u_fac_suspend_reason = "included in capex project";
+          break;
+    
+        case 4: // "Closed":
+          newRecord.state = 3; // "Closed Complete"
+          newRecord.u_fac_suspend_reason = "invoiced";
+          break;
+    
+        case 13: // "Completed - Awaiting Invoice"
+          newRecord.state = 3; // "Closed Complete"
+          newRecord.u_fac_suspend_reason = "waiting on invoice";
+          break;
+    
+        case 7: // "Duplicate - Closed"
+          newRecord.state = 7; // "Cancelled"
+          newRecord.u_fac_suspend_reason = "duplicate request";
+          break;
+    
+        case 12: // "Hold"
+          newRecord.state = 19; // "On Hold"
+          newRecord.u_fac_suspend_reason = "facilities action required";
+          break;
+    
+        case 5: // "Hold - for Future Capex"
+          newRecord.state = 19; // "On Hold"
+          newRecord.u_fac_suspend_reason = "waiting on cer approval";
+          break;
+    
+        case 6: // "Hold - Per Property Dept"
+          newRecord.state = 19; // "On Hold"
+          newRecord.u_fac_suspend_reason = "facilities action required";
+          break;
+    
+        case 1: // "Open"
+          newRecord.state = 16; // "Assigned"
+          newRecord.u_fac_suspend_reason = "-- None --";
+          break;
+    
+        case 11: // "Parts on order"
+          newRecord.state = 18; // "Work in Progress"
+          newRecord.u_fac_suspend_reason = "parts on order";
+          break;
+    
+        case -5: // "Pending approval"
+          newRecord.state = 19; // "On Hold"
+          newRecord.u_fac_suspend_reason = "waiting on opex approval";
+          break;
+    
+        case 400: // "Pending Branch"
+          newRecord.state = 16; // "Assigned"
+          newRecord.u_fac_suspend_reason = "additional information required";
+          break;
+    
+        case 8: // "Pending CER approval"
+          newRecord.state = 19; // "On Hold"
+          newRecord.u_fac_suspend_reason = "waiting on cer approval";
+          break;
+    
+        case 2: // "Pending Vendor"
+          newRecord.state = 16; // "Assigned"
+          newRecord.u_fac_suspend_reason = "dispatched to vendor";
+          break;
+    
+        case 9: // "Scheduled"
+          newRecord.state = 18; // "Work in Progress"
+          newRecord.u_fac_suspend_reason = "scheduled";
+          break;
+    
+        case 10: // "Waiting on Proposal"
+          newRecord.state = 18; // "Work in Progress"
+          newRecord.u_fac_suspend_reason = "waiting on proposal";
+          break;
+    
+        default:
+          newRecord.state = 16; // "Assigned"
+          newRecord.u_fac_suspend_reason = "-- None --";
+          break;
+      }
 
     // update new record fields
     // newRecord.number = oldRecord.number;
