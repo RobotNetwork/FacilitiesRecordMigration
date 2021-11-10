@@ -1,12 +1,8 @@
-﻿// TODOs
-//  - subcategories do not match 1 to 1
-//  - Add a Work Note "Refresh Program"
-
-// begin query on the existing Facilities table
+﻿// begin query on the existing Facilities table
 var oldRecord = new GlideRecord('x_421393_facilitie_facilities_request');
 
-// add a query for inactive tickets
-oldRecord.addQuery('number=FAC0002699');
+// add a query; only for testing purposes
+// oldRecord.addQuery('state=6');
 
 oldRecord.query();
 
@@ -16,6 +12,7 @@ var categories = ["Facilities - Exterior", "Facilities - Interior"];
 var priorities = [1, 2, 3, 4, 5];
 
 while (oldRecord.next()) {
+
     var newRecord = new GlideRecord('wm_order');
 
     // initialize (create, without saving) a new record
@@ -41,7 +38,7 @@ while (oldRecord.next()) {
     }
 
     // get current state, then map to the appropriate state and substates
-    var stateValue = parseInt(oldRecord.state)
+    var stateValue = parseInt(oldRecord.state);
     switch (stateValue) {
         case 3: // "Cancel - Future Refresh Program"
             newRecord.state = 7; // "Cancelled"
@@ -90,7 +87,7 @@ while (oldRecord.next()) {
 
         case -5: // "Pending approval"
             newRecord.state = 19; // "On Hold"
-            newRecord.u_fac_suspend_reason = "waiting on opex approval";
+            newRecord.u_fac_suspend_reason = 'waiting on opex approval'
             break;
 
         case 400: // "Pending Branch"
@@ -274,13 +271,18 @@ while (oldRecord.next()) {
         
         case "windows / glass break - board up needed":
             newRecord.setValue("subcategory", "windows- door glass break - board up needed");
-            break;    
+            break;
+        
+        default:
+            newRecord.setValue('subcategory', subcat);
+            break;
     }
 
+    // adding old FAC# to the Work Order form
     newRecord.u_fac_record = oldRecord.sys_id;
 
     // update new record fields
-    // newRecord.number = oldRecord.number;
+    newRecord.number = oldRecord.number;
     newRecord.caller = oldRecord.u_requestor;
     newRecord.u_alt_contact = oldRecord.u_alt_contact;
     newRecord.short_description = oldRecord.short_description;
