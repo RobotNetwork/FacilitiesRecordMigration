@@ -1,11 +1,13 @@
 var oldRecord = new GlideRecord('x_421393_facilitie_facilities_request');
-oldRecord.addQuery('number', 'FAC0004425');
+// oldRecord.addQuery('number', 'FAC0002094');
+oldRecord.addQuery('active', 'true');
+// oldRecord.setLimit(5);
 oldRecord.query();
 
 var categories = ["Facilities - Exterior", "Facilities - Interior"];
 
 // integer values of priorities which map to the same value in FSM
-var priorities = [1, 2, 3, 4, 5];
+var priorities = [1, 2, 3];
 
 // Transfer all journal fields from one glide record to another
 function copyNotes(oldRecord, WO_sys_id) {
@@ -14,7 +16,7 @@ function copyNotes(oldRecord, WO_sys_id) {
     oldNotes.query();
 
     var audit = new GlideRecord("sys_audit");
-    audit.addEncodedQuery("fieldname=work_notes^ORfieldname=comments^ORfieldname=assigned_to^ORfieldname=state")
+    audit.addEncodedQuery("fieldname=work_notes^ORfieldname=comments^ORfieldname=assigned_to^ORfieldname=state^ORfieldname=u_assigned_vendor^ORfieldname=priority^ORfieldname=closed_by")
     audit.addQuery("documentkey", oldRecord.getUniqueValue());
     audit.query();
 
@@ -50,10 +52,11 @@ function copyNotes(oldRecord, WO_sys_id) {
                     newAudit.setValue(prop, audit.getValue(prop));
                 }
             }
+            newAudit.setWorkflow(false);
             newAudit.autoSysFields(false);
             newAudit.insert();
         }
-
+        note.setWorkflow(false);
         note.autoSysFields(false);
         note.insert();
     }
@@ -80,6 +83,7 @@ function copyEmails(oldRecord, WO_sys_id) {
                 newEmail.setValue(prop, email.getValue(prop));
             }
         }
+        newEmail.setWorkflow(false);
         newEmail.autoSysFields(false);
         newEmail.insert();
     }
@@ -102,14 +106,17 @@ while (oldRecord.next()) {
 
     // check, then assign corresponding priority value to new record
     var priorityValue = parseInt(oldRecord.priority)
-    if (priorities.indexOf(priorityValue) != -1) {
+
+    if (priorities.indexOf(priorityValue) > -1) {
         newRecord.priority = oldRecord.priority;
     } else if (priorityValue == 6) {
         newRecord.priority = 30;
     } else if (priorityValue == 7) {
         newRecord.priority = 60;
-    } else if (priorityValue == 8) {
+    } else if (priorityValue == 8 || priorityValue == 5) { // good
         newRecord.priority = 61;
+    } else if (priorityValue == 4) {
+        newRecord.priority = 5
     }
 
     // get current state, then map to the appropriate state and substates
@@ -367,11 +374,28 @@ while (oldRecord.next()) {
     newRecord.u_next_action_date = oldRecord.u_next_action_date;
     newRecord.opened_at = oldRecord.opened_at;
     newRecord.opened_by = oldRecord.opened_by;
-    newRecord.impact = oldRecord.u_business_impact;
     newRecord.assigned_vendor = oldRecord.u_assigned_vendor
     newRecord.u_customer_vendor_updated = oldRecord.u_customer_vendor_updated;
     newRecord.follow_up = oldRecord.follow_up;
     newRecord.location = oldRecord.u_branch;
+
+    // impact matrix
+    switch (oldRecord.getDisplayValue('u_business_impact')) {
+        case 'Emergency - Unable to conduct business':
+            newRecord.setValue('impact', 1);
+            break;
+        case 'Non-Emergency':
+            newRecord.setValue('impact', 2);
+            break;
+        case 'Low Priority':
+            newRecord.setValue('impact', 3);
+            break;
+    }
+
+    // closed time stamp
+    if (oldRecord.closed_at != '') {
+        newRecord.closed_at = oldRecord.closed_at
+    }
 
     // ensures that system-created fields are mirrored to the new record
     newRecord.sys_updated_by = oldRecord.sys_updated_by;
